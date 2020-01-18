@@ -1,11 +1,11 @@
 
 ## AMP Analytics Installation guide
 
-Prerequisites:
+### Prerequisites:
 * AWS CLI installed and logged in with admin access project permissions
 * NodeJS + NPM installed
 
-
+### Deploying tracking and reporting service stack
 Clone repo and install dependencies for Lambda functions
 ```shell
 git clone https://github.com/doubtx/amp-analytics.git
@@ -33,3 +33,12 @@ aws cloudformation package --template-file ./cloudformation/template.yaml --s3-b
 aws cloudformation deploy --template-file ./cloudformation/packaged-template.yaml --stack-name $AWSStackName --capabilities CAPABILITY_IAM
 ```
 > :warning: **Stack deployment takes about 30 min**: There is CloudFormation distribution to be created which is time consuming process
+
+
+### Deploying frontend reporting SPA
+After successful deployment of AWS CloudFormation stack, your tracking and reporting APIs should be up and running
+
+You need to get some automatically generated stack parameters to be used in the next steps, to do that, you need to get details on just deployed stack:
+```shell
+aws cloudformation describe-stacks --stack-name $AWSStackName
+```
