@@ -54,6 +54,8 @@ While tracking Pixel endpoint is already running, the database for reporting is 
 ```shell
 aws glue start-crawler --name $GlueCrawlerName
 ```
+> :warning: **Before table is created, reportins API will return error**
+
 
 ### Deploying SPA
 Reporting SPA is based on VueJS + Quasar framework, to build it, you need Quasar CLI to be installed globally:
@@ -74,3 +76,7 @@ Run the following commands to create reporting user which can access SPA, please
 aws cognito-idp admin-create-user --user-pool-id $CognitoUserPoolId --username [USERNAME]
 aws cognito-idp admin-set-user-password --user-pool-id CognitoUserPoolId --username [USERNAME] --password [PASSWORD] --permanent
 ```
+
+### Accessing SPA
+Login to SPA using following URL:
+https://CloudFrontDomainName/login
