@@ -66,6 +66,7 @@ npm install -g @quasar/cli
 After installation of Quasar, run the following commands to build and deploy SPA application:
 ```shell
 cd frontend
+npm install
 quasar build
 aws s3 cp ./dist/spa/ s3://$CFFrontBucket/ --recursive --acl public-read
 ```
