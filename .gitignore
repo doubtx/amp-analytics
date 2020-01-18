@@ -1,4 +1,5 @@
 lambda/amp-reporting-api/node_modules
 lambda/amp-tracking-pixel/node_modules
+frontend/node_modules
 cloudformation/packaged-template.yaml
 frontend/dist

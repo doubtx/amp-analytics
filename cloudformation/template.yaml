@@ -335,6 +335,8 @@ Resources:
           - TargetOriginId: AMPAnalyticsReportingOrigin
             ForwardedValues:
               QueryString: true
+              Headers:
+                - Authorization
             ViewerProtocolPolicy: allow-all
             PathPattern : /stats
             MinTTL: 0

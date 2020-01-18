@@ -42,6 +42,7 @@ export default {
         ClientId : process.env.CognitoUserPoolClientId // Your client id here
       };
 
+      console.log(poolData)
       const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
 
       var authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails({

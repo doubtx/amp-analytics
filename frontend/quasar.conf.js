@@ -62,6 +62,11 @@ module.exports = function (ctx) {
       vueRouterMode: 'history', // available values: 'hash', 'history'
       showProgress: true,
       gzip: false,
+      env: {
+        CfFrontHost: JSON.stringify(process.env.CfFrontHost),
+        CognitoUserPoolId: JSON.stringify(process.env.CognitoUserPoolId),
+        CognitoUserPoolClientId: JSON.stringify(process.env.CognitoUserPoolClientId)
+      },
       analyze: false,
       // Options below are automatically set depending on the env, set them if you want to override
       // preloadChunks: false,
