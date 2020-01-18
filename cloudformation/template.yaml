@@ -1,0 +1,350 @@
+
+AWSTemplateFormatVersion: 2010-09-09
+Outputs:
+    CognitoUserPoolID:
+      Description: Use this CognitoUserPoolID to configure reporting app and create reporting user
+      Value: !Ref AMPAnalyticsReportingAPIUserPool
+    CognitoUserPoolClientID:
+      Description: Use this CognitoUserPoolClientID to configure reporting app
+      Value: !Ref AMPAnalyticsReportingAPIUserPoolClient
+    CloufFrontBucket:
+      Description: Use this bucket name to upload reporting app code
+      Value: !Ref AMPAnalyticsS3WebOriginBucket
+    CloudFrontDomainName:
+      Description: Use this endpoint domain for pixel, reporting and frontend endpoints
+      Value: !GetAtt AMPAnalyticsCloudfrontDistribution.DomainName
+    GlueCrawlerName:
+      Description: Use this name to manually run Glue crawler
+      Value: !Ref AMPAnalyticsGlueCrawler
+
+Resources:
+  AMPAnalyticsS3StorageBucket:
+    Type: AWS::S3::Bucket
+
+  AMPAnalyticsAthenaResultsBucket:
+    Type: AWS::S3::Bucket
+
+  AMPAnalyticsS3WebOriginBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+
+  AMPAnalyticsKinesisEventsStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: amp-tracking-stream
+      ShardCount: 1
+
+  AMPAnalyticsKinesisFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - firehose.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:GetShardIterator
+                  - kinesis:GetRecords
+                  - kinesis:DescribeStream
+                Resource: !GetAtt AMPAnalyticsKinesisEventsStream.Arn
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource:
+                  - !Sub ${AMPAnalyticsS3StorageBucket.Arn}/*
+                  - !Sub ${AMPAnalyticsS3StorageBucket.Arn}
+
+  AMPAnalyticsKinesisFirehoseDeliveryStreamLogGroup:
+    Type: AWS::Logs::LogGroup
+
+  AMPAnalyticsKinesisFirehoseDeliveryStreamLogStream:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref AMPAnalyticsKinesisFirehoseDeliveryStreamLogGroup
+
+  AMPAnalyticsKinesisFirehoseDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: KinesisStreamAsSource
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt AMPAnalyticsKinesisEventsStream.Arn
+        RoleARN: !GetAtt AMPAnalyticsKinesisFirehoseRole.Arn
+      S3DestinationConfiguration:
+        BucketARN: !GetAtt AMPAnalyticsS3StorageBucket.Arn
+        CloudWatchLoggingOptions:
+            Enabled: true
+            LogGroupName: !Ref AMPAnalyticsKinesisFirehoseDeliveryStreamLogGroup
+            LogStreamName: !Ref AMPAnalyticsKinesisFirehoseDeliveryStreamLogStream
+        Prefix: amp-data/date=!{timestamp:yyyy-MM-dd}/
+        ErrorOutputPrefix: amp-delivery-errors/
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 5
+        CompressionFormat: UNCOMPRESSED
+        RoleARN: !GetAtt AMPAnalyticsKinesisFirehoseRole.Arn
+
+  AMPAnalyticsTrackingPixelLambdaAccess:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+              - edgelambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:PutRecord
+                Resource: !GetAtt AMPAnalyticsKinesisEventsStream.Arn
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  AMPAnalyticsTrackingPixelLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs10.x
+      Code: '../lambda/amp-tracking-pixel/'
+      Handler: 'index.handler'
+      Role: !GetAtt AMPAnalyticsTrackingPixelLambdaAccess.Arn
+
+  AMPAnalyticsTrackingPixelLambdaVersion:
+    Type: AWS::Lambda::Version
+    Properties:
+      FunctionName: !GetAtt AMPAnalyticsTrackingPixelLambda.Arn
+
+  AMPAnalyticsGlueCrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - glue.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource:
+                  - !Sub ${AMPAnalyticsS3StorageBucket.Arn}/*
+                  - !Sub ${AMPAnalyticsS3StorageBucket.Arn}
+
+  AMPAnalyticsGlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      DatabaseName: amp-analytics
+      Role: !GetAtt AMPAnalyticsGlueCrawlerRole.Arn
+      Schedule:
+        ScheduleExpression: cron(0 12 * * ? *)
+      Targets:
+        S3Targets:
+          - Path: !Sub s3://${AMPAnalyticsS3StorageBucket}/amp-data/
+
+  AMPAnalyticsReportingAPIGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: "AMPAnalyticsReportingAPIGateway"
+
+  AMPAnalyticsReportingAPILambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - athena:StartQueryExecution
+                  - athena:GetQueryExecution
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource:
+                  - !Sub ${AMPAnalyticsAthenaResultsBucket.Arn}/*
+                  - !Sub ${AMPAnalyticsAthenaResultsBucket.Arn}
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+
+  AMPAnalyticsReportingAPILambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: '../lambda/amp-reporting-api/'
+      Timeout: 900
+      Handler: index.handler
+      MemorySize: 1024
+      Role: !GetAtt AMPAnalyticsReportingAPILambdaRole.Arn
+      Runtime: nodejs10.x
+      Environment:
+        Variables:
+          ResultsBucket : !Ref AMPAnalyticsAthenaResultsBucket
+
+  AMPAnalyticsReportingAPIUserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName: !Sub AMP-reporting-user-pool
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+
+  AMPAnalyticsReportingAPIUserPoolClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Properties:
+      ClientName: !Sub AMP-reporting-user-pool
+      GenerateSecret: false
+      UserPoolId: !Ref AMPAnalyticsReportingAPIUserPool
+
+  AMPAnalyticsReportingAPIAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: AMPAnalyticsAPIAuthorizer
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref AMPAnalyticsReportingAPIGateway
+      ProviderARNs:
+        - !GetAtt AMPAnalyticsReportingAPIUserPool.Arn
+      Type: COGNITO_USER_POOLS
+
+  AMPAnalyticsReportingAPIStatsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AMPAnalyticsReportingAPIGateway
+      ParentId: !GetAtt AMPAnalyticsReportingAPIGateway.RootResourceId
+      PathPart: stats
+
+  AMPAnalyticsReportingAPIStatsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref AMPAnalyticsReportingAPIAuthorizer
+      HttpMethod: GET
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+          - lambdaArn: !GetAtt AMPAnalyticsReportingAPILambda.Arn
+      ResourceId: !Ref AMPAnalyticsReportingAPIStatsResource
+      RestApiId: !Ref AMPAnalyticsReportingAPIGateway
+
+  AMPAnalyticsReportingAPIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - AMPAnalyticsReportingAPIStatsMethod
+    Properties:
+      RestApiId: !Ref AMPAnalyticsReportingAPIGateway
+      StageName: 'v1'
+
+  AMPAnalyticsReportingAPIGatewayLambdaInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AMPAnalyticsReportingAPILambda
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AMPAnalyticsReportingAPIGateway}/*/GET/stats"
+
+  AMPAnalyticsCloudfrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+        - Id: AMPAnalyticsFrontendOrigin
+          DomainName: !GetAtt AMPAnalyticsS3WebOriginBucket.DomainName
+          S3OriginConfig:
+            OriginAccessIdentity: ''
+        - Id: AMPAnalyticsReportingOrigin
+          DomainName: !Sub "${AMPAnalyticsReportingAPIGateway}.execute-api.${AWS::Region}.amazonaws.com"
+          OriginPath: /v1
+          CustomOriginConfig:
+            OriginProtocolPolicy: 'match-viewer'
+        CustomErrorResponses:
+        - ErrorCode: 404
+          ResponsePagePath: /index.html
+          ResponseCode: 200
+        CacheBehaviors:
+          - TargetOriginId: AMPAnalyticsFrontendOrigin
+            ForwardedValues:
+              QueryString: true
+              Headers:
+                - CloudFront-Viewer-Country
+            ViewerProtocolPolicy: allow-all
+            PathPattern : /track
+            MinTTL: 0
+            MaxTTL: 0
+            DefaultTTL: 0
+            LambdaFunctionAssociations:
+            - EventType: viewer-request
+              LambdaFunctionARN: !Ref AMPAnalyticsTrackingPixelLambdaVersion
+          - TargetOriginId: AMPAnalyticsReportingOrigin
+            ForwardedValues:
+              QueryString: true
+            ViewerProtocolPolicy: allow-all
+            PathPattern : /stats
+            MinTTL: 0
+            MaxTTL: 0
+            DefaultTTL: 0
+        DefaultCacheBehavior:
+          MinTTL: 0
+          MaxTTL: 0
+          DefaultTTL: 0
+          TargetOriginId: AMPAnalyticsFrontendOrigin
+          ForwardedValues:
+            QueryString: true
+          ViewerProtocolPolicy: redirect-to-https
