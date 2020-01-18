@@ -54,7 +54,7 @@ While tracking Pixel endpoint is already running, the database for reporting is 
 ```shell
 aws glue start-crawler --name $GlueCrawlerName
 ```
-> :warning: **Before table is created, reportins API will return error**
+> :warning: **Before table is created, reporting API will return error**
 
 
 ### Deploying SPA
