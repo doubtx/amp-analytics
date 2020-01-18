@@ -49,7 +49,7 @@ export CognitoUserPoolClientId=[CognitoUserPoolClientID]
 export GlueCrawlerName=[GlueCrawlerName]
 ```
 
-### Running Glue crawler first time manuylly (Optional)
+### Running Glue crawler first time manually (Optional)
 While tracking Pixel endpoint is already running, the database for reporting is not yet created, it will be created on the first run of Glue Crawler, which will scan S3 bucket, find all the data files and add them to data catalog, that crawl is configured to be executed automatically every day at 12, but you can first run crawler manually to create all the tables:
 ```shell
 aws glue start-crawler --name $GlueCrawlerName
