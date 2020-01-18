@@ -1,5 +1,5 @@
 
-AMP Analytics Installation guide
+## AMP Analytics Installation guide
 
 Prerequisites:
 AWS CLI installed and logged in with admin access project permissions
@@ -20,13 +20,13 @@ npm install
 cd ../..
 ```
 
-Export some variables to be during with AWS CloudFormation stack deployment, values bellow are just examples, you can use any, but please define some AWS unique bucket name
+Export some variables to be during with AWS CloudFormation stack deployment, values bellow are just examples, you can use any, but please define some AWS unique bucket name:
 ```shell
 export LambdaCodeBucket=amp-analytics-lambda-code
 export AWSStackName=amp-analytics-debug-stack
 ```
 
-Create AWS S3 bucket to be used for Lambda code uploads and deploy Cloud formation stack
+Create AWS S3 bucket to be used for Lambda code uploads and deploy Cloud formation stack:
 ```shell
 aws s3api create-bucket --bucket $LambdaCodeBucket
 aws cloudformation package --template-file ./cloudformation/template.yaml --s3-bucket $LambdaCodeBucket --output-template-file ./cloudformation/packaged-template.yaml
