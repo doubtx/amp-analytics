@@ -2,8 +2,8 @@
 ## AMP Analytics Installation guide
 
 Prerequisites:
-AWS CLI installed and logged in with admin access project permissions
-NodeJS + NPM installed
+* AWS CLI installed and logged in with admin access project permissions
+* NodeJS + NPM installed
 
 
 Clone repo and install dependencies for Lambda functions
