@@ -78,6 +78,13 @@ aws cognito-idp admin-create-user --user-pool-id $CognitoUserPoolId --username [
 aws cognito-idp admin-set-user-password --user-pool-id CognitoUserPoolId --username [USERNAME] --password [PASSWORD] --permanent
 ```
 
+### Setting tracking pixel
+Install the following pixel on the website:
+```html
+<amp-pixel src="https://d1ek6qfr9pi4xc.cloudfront.net/track?vw=VIEWPORT_WIDTH&vh=VIEWPORT_HEIGHT&sw=SCREEN_WIDTH&ua=USER_AGENT&sh=SCREEN_HEIGHT&title=TITLE&referrer=DOCUMENT_REFERRER&domain=SOURCE_HOSTNAME&page=CANONICAL_PATH&ext_ref=EXTERNAL_REFERRER" layout=nodisplay>
+```
+
+
 ### Accessing SPA
 Login to SPA using following URL:
 https://CloudFrontDomainName/login
