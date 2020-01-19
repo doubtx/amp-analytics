@@ -4,7 +4,12 @@ const uaparser = require('ua-parser-js')
 const url = require('url');
 const Kinesis = require('aws-sdk/clients/kinesis')
 
-const kinesis = new Kinesis()
+// Adjust Kinesis region here to be used as the main region for stack
+const KINESIS_REGION = 'us-east-1'
+
+const kinesis = new Kinesis({
+  region: KINESIS_REGION
+})
 
 exports.handler = async (event, context) => {
     let records = []

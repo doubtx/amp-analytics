@@ -16,6 +16,9 @@ Outputs:
     GlueCrawlerName:
       Description: Use this name to manually run Glue crawler
       Value: !Ref AMPAnalyticsGlueCrawler
+    KinesisRegion:
+      Description: Use this region to configure tracking pixel destination
+      Value: !Sub ${AWS::Region}
 
 Resources:
   AMPAnalyticsS3StorageBucket:
@@ -330,7 +333,7 @@ Resources:
             MaxTTL: 0
             DefaultTTL: 0
             LambdaFunctionAssociations:
-            - EventType: viewer-request
+            - EventType: origin-request
               LambdaFunctionARN: !Ref AMPAnalyticsTrackingPixelLambdaVersion
           - TargetOriginId: AMPAnalyticsReportingOrigin
             ForwardedValues:

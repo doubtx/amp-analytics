@@ -20,6 +20,14 @@ npm install
 cd ../..
 ```
 
+### Adjust tracking pixel code
+Hardcode AWS Kinesis region to actual region you deploy to
+Open amp-tracking-pixel/index.js and replace [AWS_REGION] with actual region
+```javascript
+const KINESIS_REGION = '[AWS_REGION]'
+```
+
+
 Export some variables to be used during AWS CloudFormation stack deployment, values bellow are just examples, you can use any, but please define some AWS unique bucket name:
 ```shell
 export LambdaCodeBucket=amp-analytics-lambda-code
