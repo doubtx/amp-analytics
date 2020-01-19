@@ -65,8 +65,7 @@ module.exports = function (ctx) {
       env: {
         CfFrontHost: JSON.stringify(process.env.CfFrontHost),
         CognitoUserPoolId: JSON.stringify(process.env.CognitoUserPoolId),
-        CognitoUserPoolClientId: JSON.stringify(process.env.CognitoUserPoolClientId),
-        KinesisRegion: JSON.stringify(process.env.KinesisRegion)
+        CognitoUserPoolClientId: JSON.stringify(process.env.CognitoUserPoolClientId)
       },
       analyze: false,
       // Options below are automatically set depending on the env, set them if you want to override
