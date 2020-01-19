@@ -20,8 +20,7 @@ npm install
 cd ../..
 ```
 
-### Adjust tracking pixel code
-Hardcode AWS Kinesis region to actual region you deploy to
+Hardcode AWS Kinesis region to actual region you deploy to, to do so:
 Open amp-tracking-pixel/index.js and replace [AWS_REGION] with actual region
 ```javascript
 const KINESIS_REGION = '[AWS_REGION]'
