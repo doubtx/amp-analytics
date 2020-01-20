@@ -214,6 +214,8 @@ Resources:
                 Resource:
                   - !Sub ${AMPAnalyticsAthenaResultsBucket.Arn}/*
                   - !Sub ${AMPAnalyticsAthenaResultsBucket.Arn}
+                  - !Sub ${AMPAnalyticsS3StorageBucket.Arn}/*
+                  - !Sub ${AMPAnalyticsS3StorageBucket.Arn}
 
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
